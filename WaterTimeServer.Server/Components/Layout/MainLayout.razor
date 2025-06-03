@@ -1,0 +1,119 @@
+﻿@using WaterTimeServer.Shared.Enums
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<PageTitle>WaterTime</PageTitle>
+
+<MudStack Row=true class="vh-100 w-100">
+    <div class="vh-100">
+        <Sidebar></Sidebar>
+    </div>
+    <CascadingValue Value="IdDoUsuario">
+        <div class="vh-100 d-flex w-100">
+            <Notificador TiposNotificacao=@TipoDeNotificacao IdDoUsuario="@IdDoUsuario" Visivel=@Visivel></Notificador>
+            <div class="p-4 w-100">
+                @Body
+            </div>
+        </div>
+    </CascadingValue>
+</MudStack>
+
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    public Guid IdDoUsuario { get; set; } = Guid.Empty;
+
+    private Sidebar sidebar { get; set; } = new();
+
+    private readonly PeriodicTimer _temporizador = new(TimeSpan.FromSeconds(60));
+    private readonly CancellationTokenSource _cts = new();
+
+    private bool Visivel { get; set; } = false;
+
+    private TiposNotificacao TipoDeNotificacao { get; set; } = TiposNotificacao.SemAviso;
+
+    [Inject] private IDialogService DialogService { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            var idUsuario = await localStorage.GetItemAsync<string>("usuario");
+
+            if (string.IsNullOrEmpty(idUsuario))
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+
+            string teste = CriptografiaHelper.Descriptografar(idUsuario ?? string.Empty);
+            IdDoUsuario = Guid.Parse(teste);
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // protected override void OnInitialized()
+    // {
+    //     _ = ExecutarTemporizadorAsync();
+    // }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ = ExecutarTemporizadorAsync();
+        }
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts.Cancel();
+        _temporizador.Dispose();
+        _cts.Dispose();
+        await Task.CompletedTask;
+    }
+
+    private async Task ExecutarTemporizadorAsync()
+    {
+        while (await _temporizador.WaitForNextTickAsync(_cts.Token))
+        {
+            try
+            {
+                Visivel = false;
+                string url = NavigationManager.BaseUri + $"api/notificacao/obter-notificacao/{IdDoUsuario}";
+                TiposNotificacao resposta = await HttpHelper.ObterJsonAsync<TiposNotificacao>(url);
+                if (resposta == TiposNotificacao.AvisoDeHidratacao)
+                {
+                    Visivel = true;
+                    TipoDeNotificacao = resposta;
+                }
+                if (resposta == TiposNotificacao.AvisoDeEncherGarrafinha)
+                {
+                    Visivel = true;
+                    TipoDeNotificacao = resposta;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Falha ao chamar API: {ex.Message}");
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+}

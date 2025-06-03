@@ -1,0 +1,126 @@
+﻿@page "/"
+@layout EmptyLayout
+@using MudBlazor
+
+<PageTitle>WaterTime – Hidrate-se melhor</PageTitle>
+
+<!-- HERO / HEADER -->
+<MudPaper Elevation="0" Class="hero d-flex flex-column align-items-center justify-center pa-12">
+    <MudText Typo="Typo.h1" Class="mb-2 text-center">WaterTime</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-6 text-center">
+        Seu lembrete inteligente para fazer pausas e beber água ao longo do dia.
+    </MudText>
+
+    <MudStack Spacing="2" Class="flex-wrap justify-center">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   Href="/login">
+            Já tenho conta – Fazer login
+        </MudButton>
+
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   Href="/cadastro">
+            Criar conta gratuita
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+<!-- DESTAQUES -->
+<MudContainer MaxWidth="MaxWidth.Medium" Class="my-10">
+    <MudStack Row=true>
+        <MudStack Spacing="6">
+
+            <MudItem xs="12" sm="12">
+                <MudPaper Elevation="1" Class="pa-6">
+                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="mt-3">Pausas Inteligentes</MudText>
+                    <MudText Typo="Typo.body2">
+                        Defina o intervalo ideal e receba lembretes suaves para beber água,
+                        sem interromper sua produtividade.
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="12">
+                <MudPaper Elevation="1" Class="pa-6">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalDrink" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="mt-3">Meta Diária Personalizada</MudText>
+                    <MudText Typo="Typo.body2">
+                        O WaterTime calcula automaticamente a quantidade ideal de água por dia
+                        com base na sua idade, peso e estilo de vida.
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+        </MudStack>
+
+        <MudStack Spacing="6">
+
+            <MudItem xs="12" sm="12">
+                <MudPaper Elevation="1" Class="pa-6">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="mt-3">Alertas Discretos</MudText>
+                    <MudText Typo="Typo.body2">
+                        Notificações leves e configuráveis, sem sons estridentes ou pop-ups invasivos.
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="12">
+                <MudPaper Elevation="1" Class="pa-6">
+                    <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="mt-3">Relatórios de Hidratação</MudText>
+                    <MudText Typo="Typo.body2">
+                        Acompanhe seu progresso diário, semanal e mensal para manter-se
+                        motivado e saudável.
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+        </MudStack>
+    </MudStack>
+</MudContainer>
+
+<!-- CTA FINAL -->
+<MudPaper Elevation="0" Class="cta d-flex flex-column align-items-center justify-center py-12">
+    <MudText Typo="Typo.h4" Class="mb-4 text-center">
+        Pronto para transformar sua rotina de hidratação?
+    </MudText>
+
+    <MudStack Spacing="2" Class="flex-wrap justify-center">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   Href="/login">
+            Entrar na minha conta
+        </MudButton>
+
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   Href="/cadastro">
+            Criar conta agora
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+<!-- RODAPÉ -->
+<footer class="text-center py-6">
+    <MudText Typo="Typo.body2">&copy; 2025 – WaterTime</MudText>
+</footer>
+
+@code {
+    /* Nenhum código-por-trás necessário para essa landing page */
+}
+
+/* ------------- ESTILOS (opcional) ------------- */
+<style>
+    .hero {
+        background: linear-gradient(135deg, #4fc3f7, #0288d1);
+        color: white;
+        min-height: 60vh;
+    }
+
+    .cta {
+        background: #f5f5f5;
+    }
+</style>

@@ -1,0 +1,140 @@
+﻿@page "/cadastro"
+@layout EmptyLayout
+@using System.ComponentModel.DataAnnotations
+@using WaterTimeServer.Shared.Entidades
+@using WaterTimeServer.Shared.DTOs
+@using WaterTimeServer.Shared.Helpers
+
+@inject NavigationManager navigationManager
+@inject HttpClient httpClient
+@inject ISnackbar Snackbar
+
+@rendermode InteractiveServer
+
+<div class="d-block text-center p-5 w-100">
+    <h1>Cadastro</h1>
+</div>
+
+<div class="d-flex justify-center p-md-5 pt-sm-5">    
+
+    <MudStack Class="w-50 d-block">
+
+
+        <EditForm Model="@novoUsuario" FormName="Login" OnValidSubmit="OnValidSubmit" OnInvalidSubmit="OnInvalidSubmit">
+
+            <DataAnnotationsValidator />
+
+            <MudCard Class="p-5">
+                <MudCardContent>
+                    <MudStack Spacing="2">
+
+                        <ConfirmarEmail @bind-Value=novoUsuario.Login></ConfirmarEmail>
+                        <MudTextField Label="Login" @bind-Value=novoUsuario.Login Class="d-none"></MudTextField>
+
+
+                        <MudTextField Label="Nome" HelperText="Max. 50 caracteres"
+                                      @bind-Value="novoUsuario.Nome" For="@(() => novoUsuario.Nome)" />
+
+                        <MudTextField Label="Senha" HelperText="Escolha uma senha forte" Class="mt-3"
+                                      @bind-Value="novoUsuario.Senha" For="@(() => novoUsuario.Senha)" InputType="InputType.Password" />
+
+                        <MudTextField Label="Confirme a senha" HelperText="Confirme sua senha" Class="mt-3"
+                                      @bind-Value="novoUsuario.ConfirmarSenha" For="@(() => novoUsuario.ConfirmarSenha)" InputType="InputType.Password" />
+
+                        <MudTextField Label="Celular" HelperText="Max. 50 caracteres"
+                                      @bind-Value="novoUsuario.Celular" For="@(() => novoUsuario.Celular)"
+                                      InputType="InputType.Telephone" Mask="@(new PatternMask("(00) 00000-0000"))" />
+
+                        <div class="border-bottom">
+                            <input class="form-control border-0" type="date" @bind=novoUsuario.DataNascimento />
+                            <ValidationMessage For="@(() => novoUsuario.DataNascimento)"></ValidationMessage>
+                        </div>
+
+                        <MudTextField Label="Peso" HelperText="Peso em KG" InputType="InputType.Number"
+                                      @bind-Value=novoUsuario.Peso For="@(() => novoUsuario.Peso)"></MudTextField>
+
+                        <MudTextField Label="Horas de sono por noite" InputType="InputType.Number" For="@(() => novoUsuario.HorasDeSono)" @bind-Value=novoUsuario.HorasDeSono></MudTextField>
+
+                        <MudTextField Label="Intervalo em minutos entre pausas" InputType="InputType.Number" @bind-Value=novoUsuario.IntervaloEmMinutos
+                                      For="@(() => novoUsuario.IntervaloEmMinutos)"
+                                      OnBlur="CalcularML"></MudTextField>
+
+                        <MudTextField Label="ML de água por pausa" HelperText="Valor em ML"
+                                      @bind-Value="novoUsuario.MLPorPausa" For="@(() => novoUsuario.MLPorPausa)"
+                                      OnBlur="CalcularIntervalo"
+                                      InputType="InputType.Number" />
+
+                        <MudTextField Label="Capacidade da Garrafa" HelperText="Valor em ML"
+                                      @bind-Value="novoUsuario.CapacidadeGarrafa" For="@(() => novoUsuario.CapacidadeGarrafa)"
+                                      InputType="InputType.Number" />
+
+                    </MudStack>
+
+                </MudCardContent>
+
+                <MudCardActions>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Info">Enviar</MudButton>
+                    <MudButton ButtonType="ButtonType.Button" Variant="Variant.Filled" Color="Color.Success" Class="ml-auto">Cancelar</MudButton>
+                </MudCardActions>
+
+            </MudCard>
+
+        </EditForm>
+    </MudStack>    
+</div>
+
+@code {
+    private Usuario modelo { get; set; } = new();
+
+    private DTOCriarUsuario_req novoUsuario { get; set; } = new();
+
+    private async Task OnInvalidSubmit()
+
+    {
+        Snackbar.Add("Formulário inválido. Verifique os campos.",Severity.Error);
+    }
+
+    private async Task OnValidSubmit()
+    {
+        try
+        {
+            string url = $"{navigationManager.BaseUri}api/usuario/cadastrar-usuario";
+            var resposta = await httpClient.PostAsJsonAsync(url, novoUsuario);
+            Snackbar.Add("Conta criada com sucesso", Severity.Success);
+            navigationManager.NavigateTo("/login");
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Usuário ou senha inválidos", Severity.Error);            
+        }        
+    }
+
+    private void CalcularML(FocusEventArgs args)
+    {
+        try
+        {
+            int novoIntervaloEmMinutos = novoUsuario.IntervaloEmMinutos;
+            int idade = UsuarioHelper.GetIdade((DateTime)novoUsuario.DataNascimento!);
+            var mlPorDia = UsuarioHelper.GetMlPorDia(idade, novoUsuario.Peso);
+
+            int numeroIntervalos = (24 - novoUsuario.HorasDeSono) * 60 / novoIntervaloEmMinutos;
+            novoUsuario.MLPorPausa = mlPorDia / numeroIntervalos;
+        }
+        catch { }
+    }
+
+    private void CalcularIntervalo(FocusEventArgs args)
+    {
+        try
+        {
+            int mlPorIntervalo = novoUsuario.MLPorPausa;
+            int idade = UsuarioHelper.GetIdade((DateTime)novoUsuario.DataNascimento!);
+            var mlPorDia = UsuarioHelper.GetMlPorDia(idade, novoUsuario.Peso);
+
+            int numeroIntervalos = mlPorDia / mlPorIntervalo;
+            novoUsuario.IntervaloEmMinutos = (24 - novoUsuario.HorasDeSono) * 60 / numeroIntervalos;
+        }
+        catch { }
+
+    }
+}

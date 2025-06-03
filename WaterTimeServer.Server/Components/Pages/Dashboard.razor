@@ -1,0 +1,178 @@
+﻿@page "/dashboard"
+@inject NavigationManager NavigationManager
+
+<h1>Dashboard</h1>
+
+<MudSelect T="string" ValueChanged="CarregarDados" Value="@selectedValue">
+    <MudSelectItem Value="@("Dia")" T="string">Dia</MudSelectItem>
+    <MudSelectItem Value="@("Semana")" T="string">Semana</MudSelectItem>
+    <MudSelectItem Value="@("Mês")" T="string">Mês</MudSelectItem>
+</MudSelect>
+
+<MudTabs>
+
+    <MudTabPanel Text="Dados">        
+
+        <MudDataGrid T="Resposta" Selec Items="@Respostas" SortMode="SortMode.Multiple" Hideable="true">
+            <Columns>
+                <SelectColumn T="Resposta" />
+                <PropertyColumn Property="x => x.DataHora" Title="Data" Sortable="true" />
+                <PropertyColumn Property="x => x.BebeuAgua" Title="Bebeu água?" />
+                <PropertyColumn Property="x => x.QuantidadeEmML" Title="Quantidade (ML)" />
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="Resposta" />
+            </PagerContent>
+        </MudDataGrid>
+
+    </MudTabPanel>
+    <MudTabPanel Text="Gráfico de Consumo">
+        <div>
+            <MudChart ChartType="ChartType.Line" ChartSeries="@SeriesConsumo" XAxisLabels="@XAxisLabels" ChartOptions="new ChartOptions() { InterpolationOption = InterpolationOption.Straight }"></MudChart>
+            <MudCheckBox T="bool" ValueChanged="(v) => SeriesConsumo.ForEach(x => x.ShowDataMarkers = v)" Label="Mostrar pontos"></MudCheckBox>
+        </div>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Gráfico de Pausas">
+        <div>
+            <MudChart ChartType="ChartType.Line" ChartSeries="@SeriesAceito" XAxisLabels="@XAxisLabels" ChartOptions="new ChartOptions() { InterpolationOption = InterpolationOption.Straight }"></MudChart>
+            <MudCheckBox T="bool" ValueChanged="(v) => SeriesAceito.ForEach(x => x.ShowDataMarkers = v)" Label="Mostrar pontos"></MudCheckBox>
+        </div>
+    </MudTabPanel>
+
+</MudTabs>
+
+
+@code {
+
+    string mensagemDeErro { get; set; } = string.Empty;
+
+    [CascadingParameter]
+    public Guid IdDoUsuario { get; set; }
+
+    private Guid IdUsuario { get; set; } = Guid.Empty;
+
+    private IEnumerable<Resposta>? Respostas = new List<Resposta>();
+    private IEnumerable<Resposta>? RespostasRaw = new List<Resposta>();  
+
+    private List<string> _events = new();
+
+    private string selectedValue = string.Empty;
+
+    public string[] XAxisLabels = { };
+
+
+    public List<ChartSeries> SeriesConsumo = new List<ChartSeries>();
+    public List<ChartSeries> SeriesAceito = new List<ChartSeries>();
+
+    private Func<Resposta, object> _sortBy => x =>
+    {
+        return x.DataHora;
+    };
+
+    private void MontarGraficoConsumo()
+    {
+        // 0-23: volume total (mL) em cada hora
+        var volumePorHora = new double[24];
+
+        if (Respostas is not null)
+        {
+            foreach (var resposta in Respostas)
+            {
+                int hora = resposta.DataHora.Hour;
+                if (resposta.BebeuAgua)
+                    volumePorHora[hora] += resposta.QuantidadeEmML;
+            }
+        }
+
+        // Série que o MudChart entende
+        SeriesConsumo = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "Água (mL)",
+            Data = volumePorHora            // <-- 24 valores
+        }
+    };
+
+        // Rótulos do eixo X: 00h, 01h, 02h...
+        XAxisLabels = Enumerable.Range(0, 24)
+                                .Select(h => $"{h:00}h")
+                                .ToArray();
+    }
+
+    private void MontarGraficoAceito()
+    {
+        // 0-23: volume total (mL) em cada hora
+        var volumePorHora = new double[24];
+
+        if (Respostas is not null)
+        {
+            foreach (var resposta in Respostas)
+            {
+                int hora = resposta.DataHora.Hour;
+                if (resposta.BebeuAgua)
+                    volumePorHora[hora] += 1;
+            }
+        }
+
+        // Série que o MudChart entende
+        SeriesAceito = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "Pausas feitas para beber água",
+            Data = volumePorHora            // <-- 24 valores
+        }
+    };
+
+        // Rótulos do eixo X: 00h, 01h, 02h...
+        XAxisLabels = Enumerable.Range(0, 24)
+                                .Select(h => $"{h:00}h")
+                                .ToArray();
+    }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IdUsuario = IdDoUsuario;
+        if (IdUsuario != Guid.Empty)
+        {
+            // string url = $"{NavigationManager.BaseUri}api/usuario/obter-usuario/{IdUsuario}";
+            // Usuario? resposta = await HttpHelper.ObterJsonAsync<Usuario>(url);
+
+            string urlDados = NavigationManager.BaseUri + $"api/notificacao/obter-dados/{IdUsuario}";
+            RespostasRaw = await HttpHelper.ObterJsonAsync<List<Resposta>>(urlDados);
+            CarregarDados("Dia");
+        }
+    }
+
+    private void CarregarDados(string selected)
+    {
+        selectedValue = selected;
+
+        DateTime dataInicial;
+        DateTime dataFinal;
+
+        if (selectedValue.Equals("Dia"))
+        {
+            dataInicial = DateTime.Now.AddDays(-1);
+            dataFinal = DateTime.Now;
+        }
+        else if (selectedValue.Equals("Semana"))
+        {
+            dataInicial = DateTime.Now.AddDays(-7);
+            dataFinal = DateTime.Now;
+        }
+        else
+        {
+            dataInicial = DateTime.Now.AddMonths(-1);
+            dataFinal = DateTime.Now;
+        }
+
+        Respostas = RespostasRaw?.Where(e => e.DataHora >= dataInicial && e.DataHora <= dataFinal).ToList();
+        MontarGraficoConsumo();
+        MontarGraficoAceito();
+    }
+
+}

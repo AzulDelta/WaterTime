@@ -1,0 +1,154 @@
+﻿@inject ISnackbar Snackbar
+@rendermode InteractiveServer
+@inject NavigationManager NavigationManager
+
+<MudSnackbarProvider/>
+
+<MudForm>
+    <MudStack Spacing=2>
+
+        <MudInput ValueChanged="EmailDoUsuarioChange"
+                  Immediate=true                  
+                  T="String"
+                  Label="Email"
+                  Placeholder="Informe o Email"
+                  InputType="InputType.Email"
+                  Required="true" />
+
+        @if (mostrarTudo)
+        {
+            <MudStack Row=true AlignItems="AlignItems.Center">
+
+                <MudButton Color="Color.Info"
+                           FullWidth=true
+                           Variant=Variant.Filled
+                           Disabled="@botaoEnviarDesativado"                           
+                           OnClick="@(async () => await EnviarEmail())">                           
+                    @botaoEnviarTexto
+                </MudButton>
+
+                <MudProgressCircular Size=Size.Small Color="Color.Primary" Indeterminate=@buscando />
+
+            </MudStack>
+
+            @if (mostrarConfirmacaoCodigo)
+            {
+                <MudInput @bind-Value="codigoDigitadoPeloUsuario"
+                          Label="Confirmar Email"
+                          Placeholder="Informe o código recebido"
+                          InputType="InputType.Email"
+                          Required="true" />
+
+                <MudButton Color="Color.Success"
+                           Variant=Variant.Filled
+                           OnClick="Confirmar">
+                    Validar Código
+                </MudButton>
+            }
+        }
+
+    </MudStack>
+</MudForm>
+
+@code {
+
+    [Parameter]
+    public string? Value { get; set; }
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }    
+
+    string? EmailDoUsuario { get; set; } = string.Empty;
+    string codigoDigitadoPeloUsuario { get; set; } = string.Empty;
+    int? numeroQueVoltouDaAPI { get; set; } = 0;
+    bool resultado { get; set; } = false;
+    bool buscando = false;
+    bool botaoEnviarDesativado = false;
+    string botaoEnviarTexto = "Solicitar código";
+
+    bool mostrarTudo = false;
+    bool mostrarConfirmacaoCodigo = true;
+
+    protected override void OnInitialized()
+    {
+        if (string.IsNullOrEmpty(EmailDoUsuario))
+        {
+            mostrarTudo = false;
+        }
+        else
+        {
+            mostrarTudo = true;
+            mostrarConfirmacaoCodigo = false;
+        }
+
+        base.OnInitialized();
+    }
+
+    private async Task EnviarEmail()
+    {
+        try
+        {
+            buscando = true;
+            botaoEnviarDesativado = true;
+
+            string url = $"{NavigationManager.BaseUri}api/usuario/enviar-email";
+
+            string? numeroOfuscado = await HttpHelper.PostarJsonAsync<string>(url, EmailDoUsuario);
+            if (String.IsNullOrEmpty(numeroOfuscado)) 
+            { 
+                Snackbar.Add("Erro ao enviar email", Severity.Error);
+                return;
+            };
+
+            int? numero = OfuscadorNumerico.ReverterCodigo(numeroOfuscado);
+            numeroQueVoltouDaAPI = numero;
+            buscando = false;
+
+            int botaoEnviarContagem = 60;
+
+            while (botaoEnviarContagem-- > 0)
+            {
+                await Task.Delay(1000);
+                botaoEnviarTexto = $"Reenviar código ({botaoEnviarContagem.ToString().PadLeft(2, '0')})";
+                await InvokeAsync(StateHasChanged);
+            }
+
+            botaoEnviarTexto = $"Reenviar código";
+            botaoEnviarDesativado = false;
+        }
+        catch (KeyNotFoundException erro)
+        {
+            Snackbar.Add(erro.Message, Severity.Error);
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Não foi possível enviar o email.", Severity.Error);
+        }
+    }
+
+    private async Task Confirmar()
+    {
+        if(string.IsNullOrEmpty(codigoDigitadoPeloUsuario))
+        {
+            Snackbar.Add("É necessário digitar um código", Severity.Error);
+            return;
+        }
+        if (Convert.ToInt32(codigoDigitadoPeloUsuario) == numeroQueVoltouDaAPI)
+        {
+            resultado = true;
+            Snackbar.Add("Código confirmado.", Severity.Info);
+            await ValueChanged.InvokeAsync(EmailDoUsuario);
+        }
+        else
+        {
+            Snackbar.Add("Não foi possível validar o código.", Severity.Error);
+        }
+        codigoDigitadoPeloUsuario = "";
+    }
+    private void EmailDoUsuarioChange(string novoValor)
+    {
+        mostrarTudo = true;
+        EmailDoUsuario = novoValor;
+        StateHasChanged();
+    }
+}
+

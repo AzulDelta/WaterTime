@@ -1,0 +1,64 @@
+﻿@page "/login"
+
+@layout EmptyLayout
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject ISnackbar Snackbar
+
+<div class="pt-5 d-flex justify-content-center">
+    <MudImage Class="w-25" Src="./midias/logo.jpg"></MudImage>
+</div>
+
+<div class="d-flex justify-center">
+    
+        <EditForm Model="@login" class="m-5" FormName="Login" OnValidSubmit="OnValidSubmit">
+
+            <DataAnnotationsValidator />
+
+            <MudCard Class="p-5">
+                <MudCardContent>
+
+                    <MudTextField Label="Email" HelperText=""
+                                  @bind-Value="login.Email" For="@(() => login.Email)" />
+                    <MudTextField Label="Senha" HelperText="" Class="mt-3"
+                                  @bind-Value="login.Senha" For="@(() => login.Senha)" InputType="InputType.Password" />
+                </MudCardContent>
+
+                <MudCardActions>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Login</MudButton>
+                    <MudButton Href="cadastro">Crie sua conta</MudButton>
+                </MudCardActions>
+
+            </MudCard>
+
+        </EditForm>
+
+</div>
+
+@code {
+
+    private DTOLogin_req login { get; set; } = new();
+    private string mensagemDeErro = "";
+
+
+    private async Task OnValidSubmit()
+    {
+        try
+        {
+            string url = NavigationManager.BaseUri + "api/usuario/login";
+
+            Usuario? resposta = await HttpHelper.PostarJsonAsync<DTOLogin_req, Usuario>(url, login);
+            if (resposta != null)
+            {
+                string usuarioCriptografado = CriptografiaHelper.Criptografar(resposta.Id.ToString());
+                await localStorage.SetItemAsync("usuario", usuarioCriptografado);
+                NavigationManager.NavigateTo("/dashboard");
+                return;
+            }
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Usuário ou senha inválidos", Severity.Error);
+        }
+    }
+}

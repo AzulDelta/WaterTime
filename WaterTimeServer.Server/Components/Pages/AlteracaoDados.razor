@@ -1,0 +1,127 @@
+﻿@page "/alt"
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<h1>Alterar Dados</h1>
+
+<MudStack>
+
+    <EditForm Model="@novoUsuario" FormName="Login" OnValidSubmit="OnValidSubmit">
+
+        <DataAnnotationsValidator />
+
+        <MudCard Class="p-5 w-50">
+            <MudCardContent>
+                <MudStack Spacing="2">
+
+                    <MudTextField Label="Nome" HelperText="Max. 50 caracteres"
+                                  @bind-Value="novoUsuario.Nome" For="@(() => novoUsuario.Nome)" />
+
+                    <MudTextField Label="Celular" HelperText="Max. 50 caracteres"
+                                  @bind-Value="novoUsuario.Celular" For="@(() => novoUsuario.Celular)"
+                                  InputType="InputType.Telephone" Mask="@(new PatternMask("(00) 00000-0000"))" />
+
+                    <MudTextField Label="Peso" HelperText="Peso em KG" InputType="InputType.Number"
+                                  @bind-Value=novoUsuario.Peso For="@(() => novoUsuario.Peso)"></MudTextField>
+
+                    <MudTextField Label="Horas de sono por noite" InputType="InputType.Number" For="@(() => novoUsuario.HorasDeSono)" @bind-Value=novoUsuario.HorasDeSono></MudTextField>
+
+                    <MudTextField Label="Intervalo em minutos entre pausas" InputType="InputType.Number" @bind-Value=novoUsuario.IntervaloEmMinutos
+                                  For="@(() => novoUsuario.IntervaloEmMinutos)"
+                                  OnBlur="CalcularML"></MudTextField>
+
+                    <MudTextField Label="ML de água por pausa" HelperText="Valor em ML"
+                                  @bind-Value="novoUsuario.MLPorPausa" For="@(() => novoUsuario.MLPorPausa)"
+                                  OnBlur="CalcularIntervalo"
+                                  InputType="InputType.Number" />
+
+                    <MudTextField Label="Capacidade da Garrafa" HelperText="Valor em ML"
+                                  @bind-Value="novoUsuario.CapacidadeGarrafa" For="@(() => novoUsuario.CapacidadeGarrafa)"
+                                  InputType="InputType.Number" />
+
+                </MudStack>
+
+            </MudCardContent>
+
+            <MudCardActions>
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Info">Salvar</MudButton>
+                <MudButton ButtonType="ButtonType.Button" Href="/dashboard" Variant="Variant.Filled" Color="Color.Success" Class="ml-auto">Cancelar</MudButton>
+            </MudCardActions>
+
+        </MudCard>
+
+    </EditForm>
+</MudStack>
+
+@code {
+
+    private DTOAlterarDados_req novoUsuario { get; set; } = new();
+    private Guid IdUsuario = Guid.Empty;
+
+    [CascadingParameter]
+    public Guid IdDoUsuario { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IdUsuario = IdDoUsuario;
+        if (IdUsuario != Guid.Empty)
+        {
+            string url = $"{NavigationManager.BaseUri}api/usuario/obter-usuario/{IdUsuario}";
+            Usuario? resposta = await HttpHelper.ObterJsonAsync<Usuario>(url);
+
+            if(resposta != null)
+            {
+                novoUsuario = new DTOAlterarDados_req
+                {
+                    IdUsuario = resposta.Id,
+                    Nome = resposta.Nome,
+                    Celular = resposta.Celular,
+                    DataNascimento = resposta.DataNascimento,
+                    Peso = resposta.Peso,
+                    HorasDeSono = resposta.HorasDeSono,
+                    IntervaloEmMinutos = resposta.IntervaloEmMinutos,
+                    MLPorPausa = resposta.MLPorPausa,
+                    CapacidadeGarrafa = resposta.CapacidadeGarrafa
+                };
+            }
+        }
+    }
+
+    private async Task OnValidSubmit()
+    {
+        string url = $"{NavigationManager.BaseUri}api/usuario/editar-usuario";
+        var resposta = await HttpHelper.PostarJsonAsync(url, novoUsuario);
+        Snackbar.Add("Alterações salvas.", Severity.Success);
+    }
+
+    private void CalcularML(FocusEventArgs args)
+    {
+        try
+        {
+            int novoIntervaloEmMinutos = novoUsuario.IntervaloEmMinutos;
+            int idade = UsuarioHelper.GetIdade((DateTime)novoUsuario.DataNascimento!);
+            var mlPorDia = UsuarioHelper.GetMlPorDia(idade, novoUsuario.Peso);
+
+            int numeroIntervalos = (24 - novoUsuario.HorasDeSono) * 60 / novoIntervaloEmMinutos;
+            novoUsuario.MLPorPausa = mlPorDia / numeroIntervalos;
+        }
+        catch { }
+    }
+
+    private void CalcularIntervalo(FocusEventArgs args)
+    {
+        try
+        {
+            int mlPorIntervalo = novoUsuario.MLPorPausa;
+            int idade = UsuarioHelper.GetIdade((DateTime)novoUsuario.DataNascimento!);
+            var mlPorDia = UsuarioHelper.GetMlPorDia(idade, novoUsuario.Peso);
+
+            int numeroIntervalos = mlPorDia / mlPorIntervalo;
+            novoUsuario.IntervaloEmMinutos = (24 - novoUsuario.HorasDeSono) * 60 / numeroIntervalos;
+        }
+        catch { }
+
+    }
+
+}

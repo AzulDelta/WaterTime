@@ -1,0 +1,27 @@
+﻿<MudPaper Height="vh-100">
+    <MudDrawerContainer Class="mud-height-full">
+        <MudDrawer Class="position-relative vh-100" @bind-Open="@_open" Elevation="0" Variant="@DrawerVariant.Persistent" Color="Color.Info">
+            <MudDrawerHeader>
+                <MudText Typo="Typo.h6">WaterTime</MudText>
+            </MudDrawerHeader>
+            <MudNavMenu>
+                <MudNavLink Match="NavLinkMatch.All" Href="altsenha" Icon="@Icons.Material.Filled.Store">Alterar senha</MudNavLink>
+                <MudNavLink Match="NavLinkMatch.All" Href="alt" Icon="@Icons.Material.Filled.LibraryBooks">Alterar dados da conta</MudNavLink>
+                <MudNavLink Class="link-light" Match="NavLinkMatch.All" Href="Dashboard" Icon="@Icons.Material.Filled.Group">Dashboard</MudNavLink>
+            </MudNavMenu>
+        </MudDrawer>        
+    </MudDrawerContainer>
+</MudPaper>
+
+@code
+{
+    private bool _open = true;
+
+    [Parameter]
+    public Color Color { get; set; } = Color.Primary;
+
+    public void ToggleDrawer()
+    {
+        _open = !_open;
+    }
+}

@@ -1,0 +1,103 @@
+﻿@using WaterTimeServer.Shared.Enums
+@inject NavigationManager NavigationManager
+@layout EmptyLayout
+
+@if (Visivel)
+{
+
+    <div class="position-absolute vh-100 w-100 d-flex justify-content-center align-items-center" style="background-color:rgba(0,0,0,0.5);top:0;left:0;z-index:99;">
+        <div class="bg-white border p-5">
+
+            @if (TiposNotificacao == TiposNotificacao.AvisoDeHidratacao)
+            {
+
+                <div class="m-5">
+                    <h2>Você bebeu água?</h2>
+                    <MudStack Row=true>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => Resposta(true)">Sim</MudButton>
+                        <MudSpacer></MudSpacer>
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => Resposta(false)">Não</MudButton>
+                    </MudStack>
+                </div>
+            }
+            @if (TiposNotificacao == TiposNotificacao.AvisoDeEncherGarrafinha)
+            {
+                <div class="m-5">
+                    <h2>Lembre-se de encher sua garrafinha!</h2>
+                </div>
+                <MudButton OnClick="(() => Visivel = false)">Fechar</MudButton>
+            }
+        </div>
+    </div>
+}
+
+@code {
+
+    [Parameter]
+    public Guid IdDoUsuario { get; set; } = Guid.Empty;
+    [Parameter]
+    public bool Visivel { get; set; } = false;
+    [Parameter]
+    public TiposNotificacao TiposNotificacao { get; set; } = TiposNotificacao.SemAviso;
+
+    private Guid IdUsuario = Guid.Empty;
+    private Guid _audioKey = Guid.NewGuid();
+
+    private async Task Resposta(bool bebeu)
+    {
+        string urlResposta = NavigationManager.BaseUri + $"api/notificacao/guardar-resposta";
+
+        string url = $"{NavigationManager.BaseUri}api/usuario/obter-usuario/{IdUsuario}";
+        Usuario? resposta = await HttpHelper.ObterJsonAsync<Usuario>(url);
+
+        DTOResposta_req respostaDTO = new DTOResposta_req
+        {
+            UserId = IdUsuario,
+            BebeuAgua = bebeu,
+        };
+
+        await HttpHelper.PostarJsonAsync<DTOResposta_req>(urlResposta, respostaDTO);
+        Visivel = false;
+    }
+
+    private async Task ExecutarTemporizadorAsync()
+    {
+        await Task.Delay(30000);
+
+        if (!Visivel) return;
+
+        if (TiposNotificacao == TiposNotificacao.AvisoDeHidratacao)
+        {
+            string urlResposta = NavigationManager.BaseUri + $"api/notificacao/guardar-resposta";
+            await HttpHelper.PostarJsonAsync<DTOResposta_req>(urlResposta, new DTOResposta_req
+            {
+                UserId = IdDoUsuario,
+                BebeuAgua = false
+            });
+        }
+
+        Visivel = false;
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IdDoUsuario != Guid.Empty)
+        {
+            IdUsuario = IdDoUsuario;
+        }
+
+        if (TiposNotificacao == TiposNotificacao.SemAviso)
+        {
+            return;
+        }
+
+        if (Visivel)
+        {
+            _ = ExecutarTemporizadorAsync();
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+}
+

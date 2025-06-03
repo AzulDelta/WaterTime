@@ -1,0 +1,74 @@
+﻿@page "/altsenha"
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<h1>Alterar Senha</h1>
+
+<MudStack Class="w-100">
+
+    <EditForm Model="@alteraSenha" FormName="AlteraSenha" OnValidSubmit="OnValidSubmit">
+
+        <DataAnnotationsValidator />
+
+        <MudCard Class="p-5 w-50">
+            <MudCardContent>
+                <MudStack Spacing="2">
+
+                    <ConfirmarEmail @bind-Value=alteraSenha.Login></ConfirmarEmail>
+                    <MudTextField Label="Login" @bind-Value=alteraSenha.Login Class="d-none"></MudTextField>
+
+                    <MudTextField Label="Senha" HelperText="Escolha uma senha forte" Class="mt-3"
+                                  @bind-Value="alteraSenha.Senha" For="@(() => alteraSenha.Senha)" InputType="InputType.Password" />
+
+                    <MudTextField Label="Confirme a senha" HelperText="Confirme sua senha" Class="mt-3"
+                                  @bind-Value="alteraSenha.ConfirmarSenha" For="@(() => alteraSenha.ConfirmarSenha)" InputType="InputType.Password" />
+
+                </MudStack>
+
+            </MudCardContent>
+
+            <MudCardActions>
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Info">Salvar</MudButton>
+                <MudButton ButtonType="ButtonType.Button" Href="/temp" Variant="Variant.Filled" Color="Color.Success" Class="ml-auto">Cancelar</MudButton>
+            </MudCardActions>
+
+        </MudCard>
+
+    </EditForm>
+</MudStack>
+
+@code {
+
+    private DTOAlterarSenha_req alteraSenha { get; set; } = new();
+    private Guid IdUsuario = Guid.Empty;
+
+    [CascadingParameter]
+    public Guid IdDoUsuario { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IdUsuario = IdDoUsuario;
+        if (IdUsuario != Guid.Empty)
+        {
+            string url = $"{NavigationManager.BaseUri}api/usuario/obter-usuario/{IdUsuario}";
+            Usuario? resposta = await HttpHelper.ObterJsonAsync<Usuario>(url);
+
+            if(resposta != null)
+            {
+                alteraSenha = new DTOAlterarSenha_req
+                {
+                    IdUsuario = resposta.Id                    
+                };
+            }
+        }
+    }
+
+    private async Task OnValidSubmit()
+    {
+        string url = $"{NavigationManager.BaseUri}api/usuario/alterar-senha";
+        var resposta = await HttpHelper.PostarJsonAsync(url, alteraSenha);
+        Snackbar.Add("Senha alterada com sucesso", Severity.Success);
+    }   
+
+}
