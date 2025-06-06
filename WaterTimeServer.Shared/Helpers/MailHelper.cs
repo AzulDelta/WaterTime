@@ -18,7 +18,10 @@ public sealed class ConfiguracaoEmail
 
 public static class EmailHelper
 {
-    private static readonly Lock _sincronizador = new();
+    // Using a simple object as a lock since `Lock` does not exist and would
+    // cause a compilation error. The lock is only used to ensure that the
+    // configuration object is replaced atomically.
+    private static readonly object _sincronizador = new();
     private static ConfiguracaoEmail _configuracao;
 
     static EmailHelper()
